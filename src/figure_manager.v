@@ -15,6 +15,16 @@ struct Paths {
 	optimized_figure_path string
 }
 
+fn get_config_file_path(filename string) !string {
+	config_dir := os.config_dir() or { return error('Failed to locate config folder') }
+	file_path := os.join_path(config_dir, 'course-manager/figures', filename)
+	if !os.exists(file_path) {
+		return error('Unable to find the ${filename} file')
+	}
+
+	return file_path
+}
+
 fn go_background() {
 	if os.fork() > 0 {
 		exit(0)
@@ -99,19 +109,17 @@ fn create(cmd Command) ! {
 		exit(3)
 	}
 
-	config_dir := os.config_dir() or { return error('failed to locate config folder') }
-
-	template_path := os.join_path(config_dir, 'course-manager', 'template.svg')
-	if !os.exists(template_path) {
-		return error('unable to find the template file')
-	}
+	template_path := get_config_file_path('template.svg')!
 
 	os.cp(template_path, figure_path) or { return error('error while copying the template file') }
 
 	// Write the figure include code
-	println('%fig ${figure_name}
-          |    @[${optimized_figure_path}]
-          |%'.strip_margin())
+	include_code_path := get_config_file_path('include_code')!
+
+	include_code := os.read_file(include_code_path)!
+
+	println(include_code.replace('<FIGURE_NAME>', figure_name).replace('<FIGURE_PATH>',
+		optimized_figure_path))
 
 	go_background()
 
@@ -126,7 +134,7 @@ fn edit(cmd Command) ! {
 	if !n.is_blank() {
 		selected_figure = n
 	} else {
-		files := os.ls(figure_folder_path) or { [] }
+		files := os.ls(figure_folder_path) or { return error('No figure found') }
 
 		mut figure_list := []string{}
 
@@ -137,6 +145,15 @@ fn edit(cmd Command) ! {
 			}
 		}
 		selected_figure = choice(figure_list, '󰇞').trim_space()
+
+		// User pressed ESC
+		if selected_figure.is_blank() {
+			return
+		}
+	}
+
+	if !os.exists(selected_figure) {
+		return error('Figure not found')
 	}
 
 	figure_path := os.join_path_single(figure_folder_path, convert_figure_name_to_filename(selected_figure,

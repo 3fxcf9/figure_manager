@@ -20,6 +20,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             vlang
+            tofi
             inkscape
             inotify-tools
             scour
@@ -47,7 +48,7 @@
             cp figure_manager $out/bin/
 
             wrapProgram $out/bin/figure_manager \
-              --prefix PATH : "${pkgs.inkscape}/bin:${pkgs.inotify-tools}/bin:${pkgs.scour}/bin"
+              --prefix PATH : "${pkgs.inkscape}/bin:${pkgs.inotify-tools}/bin:${pkgs.scour}/bin:${pkgs.tofi}/bin"
           '';
         };
 
