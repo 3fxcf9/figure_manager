@@ -17,7 +17,7 @@ struct Paths {
 
 fn get_config_file_path(filename string) !string {
 	config_dir := os.config_dir() or { return error('Failed to locate config folder') }
-	file_path := os.join_path(config_dir, 'course-manager/figures', filename)
+	file_path := os.join_path(config_dir, 'course_manager/figures', filename)
 	if !os.exists(file_path) {
 		return error('Unable to find the ${filename} file')
 	}
@@ -82,12 +82,14 @@ fn convert_filename_to_figure_name(filename string) string {
 }
 
 fn choice(options []string, prompt ?string) string {
-	prompt_option := if p := prompt { '--prompt-text=${p}' } else { '' }
-	return (os.execute_opt('echo "${options.join('\n')}" | tofi ${prompt_option}') or {
-		os.Result{
-			output: options[0]
-		}
-	}).output
+	prompt_option := if p := prompt { '-p "${p}"' } else { '' }
+
+	mut args := '-dmenu -sort -sorting-method fzf ${prompt_option} -format s -i -matching fuzzy'
+
+	result := os.execute('echo "${options.join('\n')}" | rofi ${args} 2>/dev/null')
+	selected := result.output.trim_space()
+
+	return selected
 }
 
 fn create(cmd Command) ! {
@@ -144,16 +146,12 @@ fn edit(cmd Command) ! {
 				figure_list << figure_name
 			}
 		}
-		selected_figure = choice(figure_list, '󰇞').trim_space()
+		selected_figure = choice(figure_list, '󰇞')
 
 		// User pressed ESC
 		if selected_figure.is_blank() {
 			return
 		}
-	}
-
-	if !os.exists(selected_figure) {
-		return error('Figure not found')
 	}
 
 	figure_path := os.join_path_single(figure_folder_path, convert_figure_name_to_filename(selected_figure,
@@ -162,6 +160,10 @@ fn edit(cmd Command) ! {
 		'resized'))
 	optimized_figure_path := os.join_path_single(figure_folder_path, convert_figure_name_to_filename(selected_figure,
 		'optimized'))
+
+	if !os.exists(figure_path) {
+		return error('Figure not found')
+	}
 
 	// Going background
 	go_background()

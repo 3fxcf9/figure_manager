@@ -20,7 +20,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             vlang
-            tofi
+            rofi
             inkscape
             inotify-tools
             scour
